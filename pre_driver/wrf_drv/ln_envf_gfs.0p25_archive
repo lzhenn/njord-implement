@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Get GFS data from HKUST data server
+#
+
+
+[ $# -eq 3 ] || {
+  echo "Usage: $0 YYYYMMDDhh ndays todir"
+  echo " e.g.: $0 2015110512 5 /tmp/mygfs_data"
+  exit 1
+}
+
+DataDir=/home/dataop/data/ncep/gfs_0.25deg_archive
+INIT_TIME=$1
+NDays=$2
+TODIR=$3
+
+ValidNDays="1 2 3 4 5 6 7"
+
+HH=${INIT_TIME:8:2}
+[ "$HH" == "12"  ] || {
+  echo "Invalid initial datetime: ${INIT_TIME}, initial datetime hour must be in 00 or 12"
+  exit 1
+}
+
+
+[ -d $DataDir ] || {
+  echo "GFS Data Directory $DataDir does not exist"
+  exit 1
+}
+
+ok=0
+for d in $ValidNDays
+do
+  if [ $NDays -eq $d ]; then
+    ok=1
+    break
+  fi
+done
+
+[ $ok -eq 1 ] || {
+  echo "Invalid NDays = ${NDays}, must be one of $ValidNDays"
+  exit 1
+}
+
+target_dir=${TODIR}
+FromFile=${DataDir}/${INIT_TIME:0:4}/${INIT_TIME:0:6}/${INIT_TIME:0:8}/gfs.0p25.${INIT_TIME}.*
+ln -sf $FromFile $TODIR
+exit 0

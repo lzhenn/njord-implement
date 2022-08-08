@@ -1,0 +1,94 @@
+PROJECT 'GBA_d01' '1'
+'3Way coupling WRF-SWAN-ROMS'
+''
+''
+
+MODE NONSTATIONARY TWODIMENSIONAL
+SET DEPMIN 0.05 INRHOG 1 NAUTICAL PWTAIL 5
+COORDINATES SPHERICAL
+
+&& KEYWORD for number of nested SWAN grids.
+NSGRIDS 2 
+
+&& KEYWORDS TO CREATE AND READ COMPUTATIONAL GRID &&
+CGRID CURVILINEAR 481 321 EXC 9.999000e+003 9.999000e+003 CIRCLE 36 0.04 1.0 24
+READGRID COORDINATES 1 'Projects/Njord/roms_swan_grid/swan_coord_d02.grd' 4 0 0 FREE 
+
+&& KEYWORDS TO CREATE AND READ BATHYMETRY GRID &&
+INPGRID BOTTOM CURVILINEAR 0 0 481 321 EXC 9.999000e+003
+READINP BOTTOM 1 'Projects/Njord/roms_swan_grid/swan_bathy_d02.bot' 4 0 FREE 
+
+&& KEYWORD TO CREATE CURRENT GRID &&
+INPGRID CURRENT CURVILINEAR 0 0 481 321 EXC 9.999000e+003 &
+       NONSTATIONARY ssyyyymmdd.hh0000 1 DAY eeyyyymmdd.hh0000
+ 
+&& KEYWORD TO CREATE WATER LEVEL GRID &&
+INPGRID WLEV CURVILINEAR 0 0 481 321 EXC 9.999000e+003 &
+       NONSTATIONARY ssyyyymmdd.hh0000 1 DAY eeyyyymmdd.hh0000
+
+&& KEYWORD TO CREATE WIND GRID &&
+INPGRID WIND REGULAR -6000 -6000 0 1 1 2000000. 2000000. &
+       NONSTATIONARY ssyyyymmdd.hh0000 1 DAY eeyyyymmdd.hh0000
+
+&& KEYWORD TO CREATE BOTTOM FRIC GRID &&
+INPGRID FRIC CURVILINEAR 0 0 481 321 EXC 9.999000e+003 &
+       NONSTATIONARY ssyyyymmdd.hh0000 1 DAY eeyyyymmdd.hh0000
+
+& Boundary files  ****************************************
+
+&  here is an example of a constant value along the open boundary
+BOUND SHAPESPEC JONSWAP PEAK DSPR DEGREES
+&BOUNDSPEC SEGMENT IJ     0     0     0   321  CONSTANT PAR 0.5 14.0 180. 20.
+&BOUNDSPEC SEGMENT IJ     0     0  481     0  CONSTANT PAR 0.5 14.0 180. 20.
+&BOUNDSPEC SEGMENT IJ  481     0  481   321  CONSTANT PAR 0.5 14.0 0. 20.
+
+&  here is an example using TPAR files
+& here is an example using 2D Spec files
+& 2D Spec Boundary files
+&BOUNDSPEC SEGMENT IJ     1    61     1    65 VARIABLE FILE 0 'Projects/GBA/WW3part_01.spc2d'
+&BOUNDSPEC SEGMENT IJ    87     1    87    21 VARIABLE FILE 0 'Projects/GBA/WW3part_02.spc2d'
+&BOUNDSPEC SEGMENT IJ    87    21    87    41 VARIABLE FILE 0 'Projects/GBA/WW3part_03.spc2d'
+&BOUNDSPEC SEGMENT IJ    87    41    87    61 VARIABLE FILE 0 'Projects/GBA/WW3part_04.spc2d'
+&BOUNDSPEC SEGMENT IJ    87    61    87    65 VARIABLE FILE 0 'Projects/GBA/WW3part_05.spc2d'
+&BOUNDSPEC SEGMENT IJ    21     1    41     1 VARIABLE FILE 0 'Projects/GBA/WW3part_06.spc2d'
+&BOUNDSPEC SEGMENT IJ    41     1    61     1 VARIABLE FILE 0 'Projects/GBA/WW3part_07.spc2d'
+&BOUNDSPEC SEGMENT IJ    61     1    81     1 VARIABLE FILE 0 'Projects/GBA/WW3part_08.spc2d'
+&BOUNDSPEC SEGMENT IJ    81     1    87     1 VARIABLE FILE 0 'Projects/GBA/WW3part_09.spc2d'
+&BOUNDSPEC SEGMENT IJ    61    65    81    65 VARIABLE FILE 0 'Projects/GBA/WW3part_10.spc2d'
+&BOUNDSPEC SEGMENT IJ    81    65    65    65 VARIABLE FILE 0 'Projects/GBA/WW3part_11.spc2d'
+
+NGRID 'd03bdy' 113.823 22.116 0 0.658 0.507 52 40
+NESTOUT 'd03bdy' 'd03bdy.ssyyyymmdd.hh.dat' OUTPUT 1 1 HR
+& Restart name **********************************
+INITIAL HOTSTART MULTIPLE 'njord_init_d02.hot'
+&INIT
+
+& PHYSICS  ****************************************
+BREAKING CONSTANT 1.0 0.73
+FRICTION MADSEN 0.05
+&OFF QUAD
+GEN3 KOMEN
+&WCAP KOM 2.36E-5 3.02E-3 2.0 1.0 1.0
+PROP BSBT
+
+&BLOCK 'COMPGRID' NOHEADER  'hsig_d01.nc'    LAY 4 HSIGN 1.  OUTPUT ssyyyymmdd.hh0000 1 HR
+&BLOCK 'COMPGRID' NOHEADER  'hswell_d01.nc'    LAY 4 HSWELL 1.  OUTPUT ssyyyymmdd.hh0000 1 HR
+&BLOCK 'COMPGRID' NOHEADER  'pdir_d01.nc'    LAY 4 PDIR 1.  OUTPUT ssyyyymmdd.hh0000 1 HR
+&BLOCK 'COMPGRID' NOHEADER  'tps_d01.nc'  LAY 4 TPS 1.   OUTPUT ssyyyymmdd.hh0000 1 HR
+
+& Yangjiang Windfarm
+&POINTS 'SITE' 111.608889 20.961667
+&SPEC 'SITE' SPEC2D ABS 'swan_spec_yangjiang.ascii' OUTPUT ssyyyymmdd.hh0000 1 HR
+
+&RESTART 'swan_rst_d01.dat' FREE 24 HR
+
+
+
+&COMPUTE STAT ssyyyymmdd.hh0000
+COMPUTE NONSTAT ssyyyymmdd.hh0000 180 SEC eeyyyymmdd.hh0000
+
+HOTFILE 'njord_init_d02.hot'
+
+STOP
+
+
