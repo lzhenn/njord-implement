@@ -37,6 +37,19 @@ def write_log(msg, lvl=20):
 
     logging.log(lvl, msg)
 
+def parse_fmt_timepath(tgt_time, fmtpath):
+    '''
+    parse time string to datetime object
+    '''
+    seg_path=fmtpath.split('@')
+    parsed_path=''
+    for seg in seg_path:
+        if seg.startswith('%'):
+            parsed_path+=tgt_time.strftime(seg)
+        else:
+            parsed_path+=seg
+    return parsed_path
+
 def is_domain_within_wrf(lat_swan, lon_swan, wrf_u10):
     '''
     test if swan domain is within the wrf domain

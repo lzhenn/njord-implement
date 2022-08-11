@@ -15,12 +15,12 @@ import pandas as pd
 import xarray as xr
 from utils import utils
 
-print_prefix='lib.swan_bdy_maker>>'
+print_prefix='lib.bdy_maker>>'
 
 CWD=sys.path[0]
 
 
-class SWANBdyMaker:
+class BdyMaker:
 
     '''
     Construct bdymaker to generate boundary file for SWAN 

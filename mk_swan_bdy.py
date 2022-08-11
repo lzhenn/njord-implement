@@ -19,7 +19,7 @@ def main_run():
 
     # build maker 
     utils.write_log('Build boundary maker...')
-    bdy_maker=lib.bdy_maker.BdyMaker(cfg_hdl)
+    bdy_maker=lib.swan_bdy_maker.SWANBdyMaker(cfg_hdl)
     
     # print seg cmd for swan.in
     bdy_maker.print_seg_cmd()
