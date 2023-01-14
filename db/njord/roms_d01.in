@@ -64,7 +64,7 @@
 !
 ! Application title.
 
-       TITLE = Njord 
+       TITLE = njord 
 
 ! C-preprocessing Flag.
 
@@ -973,10 +973,10 @@ Dout(iTvdif) == F F     ! temp_vdiff, ...    vertical diffusion
 
 ! Input NetCDF file names, [1:Ngrids].
 
-     GRDNAME == Projects/Njord/roms_swan_grid/roms_d01_omp.nc 
+     GRDNAME == Projects/njord/roms_swan_grid/roms_d01_omp.nc 
 !                Projects/Njord/roms_swan_grid/roms_d02_lp0.08.nc
-!     ININAME == Projects/Njord/spinup_restart/gba_ocean_rst_d01.nc 
-     ININAME == Projects/Njord/ow_icbc/coawst_ini.nc 
+!     ININAME == Projects/njord/spinup_restart/gba_ocean_rst_d01.nc 
+     ININAME == Projects/njord/ow_icbc/coawst_ini.nc 
 !                Projects/Njord/ow_icbc/d02/coawst_ini_d02.nc
      ITLNAME == ocean_itl.nc
      IRPNAME == ocean_irp.nc
@@ -1001,7 +1001,7 @@ Dout(iTvdif) == F F     ! temp_vdiff, ...    vertical diffusion
      NCLMFILES == 1                         ! number of climate files
 
 CLMNAME_placeholder
-!     CLMNAME ==  Projects/Njord/ow_icbc/coawst_clm_yyyymmdd.nc 
+!     CLMNAME ==  Projects/njord/ow_icbc/coawst_clm_yyyymmdd.nc 
 !                 Projects/Njord/ow_icbc/merged_coawst_clm.nc
 
 

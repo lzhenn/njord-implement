@@ -10,66 +10,97 @@ Nov 13, 2021 --- Fit for Njord Pipeline
 
 Zhenning LI
 '''
-import os, sys
+import os, sys, logging.config
 import datetime
 import lib
+from utils import utils
 
 CWD=sys.path[0]
 
 def main_run():
-    
+      
+    # logging manager
+    logging.config.fileConfig('./conf/logging_config.ini')
+
     # controller config handler
     cfg_hdl=lib.cfgparser.read_cfg(CWD+'/conf/config.hcast.ini')
-    
-    # parse cfg
     init_ts=datetime.datetime.strptime(
-            cfg_hdl['NJORD']['model_init_ts'], '%Y%m%d%H')
-    run_days=int(cfg_hdl['NJORD']['model_run_days'])
-    roms_domain_root=CWD+'/domaindb/'+cfg_hdl['NJORD']['nml_temp']+'/'
+        cfg_hdl['NJORD']['model_init_ts'], '%Y%m%d%H')
+    run_days=int(cfg_hdl['NJORD']['model_run_days']) 
+    db_nml=cfg_hdl['NJORD']['nml_temp']
+    roms_domain_root=CWD+'/domaindb/'+db_nml+'/'
     
+    # parse directory
     if os.path.exists(roms_domain_root+'roms_d02_omp.nc'):
-        roms_nest_flag=True
+        njord_dir=CWD+'/Njord_nest/'
     else:
-        roms_nest_flag=False
+        njord_dir=CWD+'/Njord/'
     
-    if cfg_hdl['NJORD']['case_name'] == '@date':
-        cfg_hdl['NJORD']['case_name']=cfg_hdl['NJORD']['model_init_ts']
+    if not(os.path.exists(njord_dir)):
+        utils.throw_error('Njord directory does not exist!')
 
+    proj_dir=njord_dir+'/Projects/'+db_nml
+
+    if not(os.path.exists(proj_dir)):
+        os.mkdir(proj_dir)
+
+    cfg_hdl['NJORD']['case_name']=utils.parse_fmt_timepath(
+        init_ts, cfg_hdl['NJORD']['case_name'])
+    
+    cfg_hdl['NJORD']['arch_root']=utils.parse_fmt_timepath(
+        init_ts, cfg_hdl['NJORD']['arch_root'])
+ 
+    cfg_hdl['ROMS']['raw_root']=utils.parse_fmt_timepath(
+        init_ts, cfg_hdl['ROMS']['raw_root'])
+
+    cfg_hdl['ROMS']['icbc_root']=utils.parse_fmt_timepath(
+        init_ts, cfg_hdl['ROMS']['icbc_root'])
+    
+    # ---------------GEN SWAN BDY---------------
     if cfg_hdl['SWAN'].getboolean('gen_bdy') == True:
-        os.system('python3 '+CWD+'/mk_swan_bdy.py')        
+        ecode=os.system('python3 '+CWD+'/mk_swan_bdy.py')        
+        if ecode>0:
+            utils.throw_error('Error in generating SWAN boundary file!')
     
     # -----------ROMS DOWNLOAD AND INTERP-----------
-    if cfg_hdl['ROMS']['download_flag']=='1' or cfg_hdl['ROMS']['interp_flag']=='1':
+    if cfg_hdl['ROMS']['download_flag']=='1':
+        # 1
+        args=init_ts.strftime('%Y%m%d%H')+' '
+        # 2
+        args=args+cfg_hdl['ROMS']['raw_root']+' '
+        # 3 init run flag
+        args=args+str(run_days)+' '
+        # 4
+        args=args+cfg_hdl['NJORD']['nml_temp']+' '
         
-        # 1 STRT_DATE_FULL
-        args=init_ts.strftime('%Y-%m-%d_%H')+' '
-        # 2 NJORD_ROOT
-        args=args+roms_domain_root+' '
-        # 3 RA_ROOT
-        args=args+cfg_hdl['ROMS']['ra_root']+' '
-        # 4 CASE_NAME
-        args=args+cfg_hdl['NJORD']['model_init_ts']+' '
-        # 5 FCST_DAYS
-        args=args+cfg_hdl['NJORD']['model_run_days']+' '
-        # 6 DOWNLOAD
-        args=args+cfg_hdl['ROMS']['download_flag']+' '
-        # 7 INTERP
-        args=args+cfg_hdl['ROMS']['interp_flag']+' '
-        # run utils/hycom_down_interp.sh 
-        os.system('sh '+CWD+'/utils/hycom_down_interp_hcst.sh '+args)
+        ecode=os.system(
+            'python3 '+CWD+'/pre_driver/roms_drv/down-hycom-analysis.py '+args)        
+        if ecode>0:
+            utils.throw_error('Error in preparing ROMS icbc file!')
+    
+    if cfg_hdl['ROMS']['interp_flag']=='1':
+        # build icbc maker 
+        ecode=os.system('python3 '+CWD+'/prep_roms_icbc.py')        
+        if ecode>0:
+            utils.throw_error('Error in preparing ROMS icbc file!')
+    
     # ----------------WRF PREPROCESS---------------
     if cfg_hdl['WRF'].getboolean('run_wrf_driver'):
-        cfg_smp=lib.cfgparser.read_cfg(CWD+'/wrf-top-driver/conf/config.sample.ini')
-        
+        cfg_smp=lib.cfgparser.read_cfg(
+            CWD+'/wrf-top-driver/conf/config.sample.ini')
         
         # merge ctrler
         cfg_tgt=lib.cfgparser.merge_cfg(cfg_hdl, cfg_smp)
 
         # write ctrler
-        lib.cfgparser.write_cfg(cfg_tgt, CWD+'/wrf-top-driver/conf/config.ini')
+        lib.cfgparser.write_cfg(
+            cfg_tgt, CWD+'/wrf-top-driver/conf/config.ini')
         
         # run wrf-top-driver
-        os.system('cd wrf-top-driver; python top_driver.py')
+        ecode=os.system('cd wrf-top-driver; python top_driver.py')
+        if ecode>0:
+            utils.throw_error('Error in running wrf-top-driver!')
+
     # ------------------NJORD LOOP-------------------
     curr_ts=init_ts
     continue_flag=cfg_hdl['NJORD'].getboolean('continue_run')
@@ -84,32 +115,25 @@ def main_run():
             args=args+'1'+' ' # init run
         else:
             args=args+'0'+' '
-        # 4
-        args=args+cfg_hdl['NJORD']['case_name']+' '
+        # 4 ROMS ICBC ROOT
+        args=args+cfg_hdl['ROMS']['icbc_root']+' '
         # 5
         args=args+cfg_hdl['NJORD']['nml_temp']+' '
-        # 6 NJORD_ROOT
-        if roms_nest_flag:
-            args=args+CWD+'/Njord_nest/ '
-        else:
-            args=args+CWD+'/Njord/ '
-        # 7 RA_ROOT
-        args=args+cfg_hdl['ROMS']['ra_root']+' '
-        # 8 ARCH_ROOT
+        # 6 NJORD ROOT
+        args=args+njord_dir+' '
+        # 7 ARCH_ROOT
         args=args+cfg_hdl['NJORD']['arch_root']+' '
-        # 9 ROMS DT
+        # 8 ROMS DT
         args=args+cfg_hdl['ROMS']['dt']+' '
-        # 10 WRF RST
+        # 9 WRF RST
         if (iday==0):
             args=args+cfg_hdl['WRF']['restart_run']+' '
         else:
             args=args+'1'+' '
-        # 11 OFFSET_DAY for ROMS DEBUG
-        #args=args+str(iday)+' '
-        args=args+'1 '
-
         # run hcast-ctl.sh
-        os.system('sh '+CWD+'/hcast-ctl.sh '+args)
+        ecode=os.system('sh '+CWD+'/hcast-ctl.sh '+args)
+        if ecode>0:
+            utils.throw_error('Error in running hcast-ctl.sh!')
         curr_ts=init_ts+datetime.timedelta(days=iday+1)
 
 if __name__ == '__main__':

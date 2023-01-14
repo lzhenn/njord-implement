@@ -16,6 +16,7 @@ from utils import utils
 
 CWD=sys.path[0]
 
+dom_id='d01'
 # !!! FIXED DEPTH: NEVER CHANGE THIS BELOW !!!
 DENSE_DP=np.concatenate((
     np.arange(0,50), np.arange(50, 200,10),
@@ -25,9 +26,9 @@ DENSE_DP=np.concatenate((
 VAR_MAP={'temp':'dthtao', 'salt':'dso'}
 
 dfile='/home/lzhenn/array74/data/cmip6_pgw/diff_ocn_ssp585.nc'
-dom_file='./domaindb/njord_t1t2/roms_d02_omp.nc'
-fin_dir='/home/lzhenn/drv_field/icbc/2018091200/'
-fout_dir='/home/lzhenn/drv_field/icbc/2018091200pgw/'
+dom_file='./domaindb/njord_t1t2/roms_'+dom_id+'_omp.nc'
+fin_dir='/home/lzhenn/drv_field/icbc/2021062700/'
+fout_dir='/home/lzhenn/drv_field/icbc/2021062700pgw/'
 
 
 def main_run():
@@ -52,7 +53,7 @@ def main_run():
         'lon': ds_pgw['longitude'][0,:], 
         'lat': ds_pgw['latitude'][:,0]}) 
 
-    
+    ds_pgw=ds_pgw.drop(['lev','longitude','latitude','i','j'])
     # Get the domain mask
     print('get domain file...')
     ds_dom=xr.open_dataset(dom_file)
@@ -81,7 +82,10 @@ def main_run():
     
     # get init/bdy/clm files
     print('PGW file vertical interp to standardized mesh...')
-    ds_ini=xr.open_dataset(fin_dir+'coawst_ini_d02.nc') 
+    if dom_id=='d02':
+        ds_ini=xr.open_dataset(fin_dir+'coawst_ini_'+dom_id+'.nc') 
+    else:
+        ds_ini=xr.open_dataset(fin_dir+'coawst_ini.nc') 
     # calculate vertical coordinate before 3d interpolation
     zeta = ds_ini['zeta'] 
     z_rho = lib.roms_icbc_maker.sigma2depth(zeta, h, ds_ini)
@@ -104,8 +108,15 @@ def main_run():
             idx3d=np.broadcast_to(idx2d,(NZ_DP,ny,nx))
             ds_ini[key].values[0,iz,:,:]=ds_ini[key].values[0,iz,:,:]+np.take_along_axis(
                 ds_pgw[var].values,idx3d,axis=0)[0,:,:]
-    ds_ini.to_netcdf(fout_dir+'coawst_ini_d02.nc')
-    exit()
+    if dom_id =='d02':
+        ds_ini.to_netcdf(fout_dir+'coawst_ini_'+dom_id+'.nc')
+    else:
+        ds_ini.to_netcdf(fout_dir+'coawst_ini.nc')
+
+    # exit if domain 02
+    if dom_id =='d02':
+        exit()
+
     print('gen clm files...')
     #Build climatology and bdy file
     for fn in clm_lst:

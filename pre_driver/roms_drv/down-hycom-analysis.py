@@ -20,13 +20,13 @@ https://ncss.hycom.org/thredds/ncss/GLBv0.08/expt_92.8?disableLLSubset=on&disabl
 '''
 
 import os, sys
-import json
 import time
 import requests
 import numpy as np
 import pandas as pd
 import datetime
 
+CWD=sys.path[0]
 #----------------------------------------------------
 # User Defined Part
 #----------------------------------------------------
@@ -43,23 +43,34 @@ def main():
     # simulation days
     sim_ndays=int(args[3])
     
+    # domain range
+    dom_group=args[4] 
+    
     # tframes
     tfrms=np.arange(0,sim_ndays+1)
 
     try_time=5
-    sleep=60
+    sleep=60 
     
     # CONSTANTS for MATLAB after 20140701
     var_list=['2d','ts3z','3zt','3zs','uv3z','3zu','3zv']
-    
-    # CONSTANTS for MATLAB before 20140701
-    VAR_LIST=[('2d','2d'),('salt','s'),('temp','t'),('uvel','u'),('vvel','v')]
 
+    if os.path.exists(fout_dir)==False:
+        os.mkdir(fout_dir) 
 
     # parser
     int_time_obj = datetime.datetime.strptime(g_init_time, '%Y%m%d%H')
     print('>>>>ROMS: HYCOM fetch from '+int_time_obj.strftime('%Y-%m-%d_%HZ'))
-    df_exp_info   =  pd.read_csv('hycom_list.txt', sep='\s+')
+    df_exp_info   =  pd.read_csv(CWD+'/hycom_list.txt', sep='\s+')
+
+
+    # domain group binding
+    df_dom_info=pd.read_csv(CWD+'/../../db/hycom_db.csv',index_col='dom_grp')
+    range=df_dom_info.loc[dom_group]
+    range_seg='&north='+str(range['north'])
+    range_seg=range_seg+'&west='+str(range['west'])
+    range_seg=range_seg+'&east='+str(range['east'])
+    range_seg=range_seg+'&south='+str(range['south'])
 
     # find exp binding
     for idx, itm in df_exp_info.iterrows():
@@ -73,14 +84,14 @@ def main():
         curr_filetime=int_time_obj+datetime.timedelta(days=int(ifrm))
         # URL base str for forecast data
         url_base='https://ncss.hycom.org/thredds/ncss/'+exp_series+'0.08/'+exp_name
-        if curr_filetime>datetime.datetime(2014,7,1):
+        if curr_filetime>datetime.datetime(2016,4,18):
             url_base=url_base+'?'
             url_var_range='var=surf_el&var=salinity&var=water_temp&var=water_u&var=water_v'
         else:
             url_base=url_base+'/'+curr_filetime.strftime('%Y')+'?'
             url_var_range='var=ssh&var=salinity&var=temperature&var=u&var=v'
 
-        url_var_range=url_var_range+'&north=30&west=100&east=130&south=10&horizStride=1'
+        url_var_range=url_var_range+range_seg+'&horizStride=1'
         url_time='&time='+curr_filetime.strftime('%Y-%m-%dT%H')+'%3A00%3A00Z'
         #url_time_start='&time_start='+curr_filetime.strftime('%Y-%m-%dT%H')+'%3A00%3A00Z'
         #url_time_end='&time_end='+curr_filetime.strftime('%Y-%m-%dT%H')+'%3A00%3A00Z'
@@ -107,7 +118,7 @@ def main():
                 time.sleep(sleep)
         if try_time==0:
             print('Download failed!')
-            exit()
+            exit(1)
         f = open(fout_dir+'/'+fn, 'wb')
         f.write(rqst.content)
         f.close()

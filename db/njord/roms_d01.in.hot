@@ -64,7 +64,7 @@
 !
 ! Application title.
 
-       TITLE = Njord 
+       TITLE = njord 
 
 ! C-preprocessing Flag.
 
@@ -972,7 +972,7 @@ Dout(iTvdif) == F F     ! temp_vdiff, ...    vertical diffusion
 
 ! Input NetCDF file names, [1:Ngrids].
 
-     GRDNAME == Projects/Njord/roms_swan_grid/roms_d01_lp0d1.nc 
+     GRDNAME == Projects/njord/roms_swan_grid/roms_d01_lp0d1.nc 
 !                Projects/Njord/roms_swan_grid/roms_d02_lp0.08.nc
      ININAME ==  njord_rst_d01.nc 
 !     ININAME == Projects/Njord/ow_icbc/d01/coawst_ini.nc 

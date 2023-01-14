@@ -15,12 +15,12 @@ import pandas as pd
 import xarray as xr
 from utils import utils
 
-print_prefix='lib.bdy_maker>>'
+print_prefix='lib.swan_bdy_maker>>'
 
 CWD=sys.path[0]
 
 
-class BdyMaker:
+class SWANBdyMaker:
 
     '''
     Construct bdymaker to generate boundary file for SWAN 
@@ -142,27 +142,41 @@ class BdyMaker:
                 line=re.sub('@BOUNDSPEC', cmd_line, line)
                 sources.write(line)
 
-        print(cmd_line)
+        #print(cmd_line)
     
     def parse_seg_waves(self):
         """ parse seg cmd for swan.in 
         """
         utils.write_log(print_prefix+'parse seg waves from bdy files...')
                # read the first file
+        gfs_flag=False
         fn=self.bdy_dir+'/'+self.strt_time.strftime('%Y%m%d')+'-wv.grib'
-        utils.write_log(print_prefix+fn+' Reading...')
+        
         if not(os.path.exists(fn)):
-            utils.throw_error(print_prefix+'cannot locate:'+fn+', please check files or settings!')
+            fn=self.bdy_dir+'/gfswave.t%sz.global.0p16.f000.grib2' % self.strt_time.strftime('%H')
+            if not(os.path.exists(fn)):
+                utils.throw_error(
+                    print_prefix+'cannot locate: %s' % fn)
+            gfs_flag=True
+            hrs=0
+        utils.write_log(print_prefix+fn+' Reading...')
 
         ds_grib = [xr.load_dataset(fn, engine='cfgrib', backend_kwargs={'errors': 'ignore'})]
         # read following files
         curr_t= self.strt_time
-        while curr_t.strftime('%Y%m%d') != self.end_time.strftime('%Y%m%d'):
-            curr_t=curr_t+datetime.timedelta(days=1)
-            fn=self.bdy_dir+'/'+curr_t.strftime('%Y%m%d')+'-wv.grib'
+        while curr_t.strftime('%Y%m%d%H') < self.end_time.strftime('%Y%m%d%H'):
+            if gfs_flag:
+                hrs=hrs+6
+                curr_t=curr_t+datetime.timedelta(hours=6)
+                fn=self.bdy_dir+'/gfswave.t%sz.global.0p16.f%03d.grib2' % (
+                    self.strt_time.strftime('%H'), hrs)
+            else:
+                curr_t=curr_t+datetime.timedelta(days=1)
+                fn=self.bdy_dir+'/'+curr_t.strftime('%Y%m%d')+'-wv.grib'
             utils.write_log(print_prefix+fn+' Reading...')
             if not(os.path.exists(fn)):
-                utils.throw_error(print_prefix+'cannot locate:'+fn+', please check files or settings!')
+                utils.throw_error(
+                    print_prefix+'cannot locate:'+fn+', please check files or settings!')
             ds_grib.append(xr.load_dataset(fn, engine='cfgrib', backend_kwargs={'errors': 'ignore'}))
         
         comb_ds=xr.concat(ds_grib, 'time')
@@ -170,9 +184,17 @@ class BdyMaker:
 
         src_lon=comb_ds['longitude'].values
         src_lat=comb_ds['latitude'].values
-        if not(utils.is_domain_within_bdyfile(self.lat2d, self.lon2d, src_lon, src_lat)):
-            utils.write_log(print_prefix+'SWAN domain is out of wave bdy file! Cannot continue!')
-            exit()
+        
+        # print seg cmd for swan.in 
+        self.print_seg_cmd()
+        
+        utils.write_log(print_prefix+'swan lat min: %f, max: %f; lon min: %f, max: %f' % (
+            np.min(self.lat2d), np.max(self.lat2d), np.min(self.lon2d), np.max(self.lon2d)))
+        utils.write_log(print_prefix+'bdy lat min: %f, max: %f; lon min: %f, max: %f' % (
+            np.min(src_lat), np.max(src_lat), np.min(src_lon), np.max(src_lon)))
+ 
+        if not(utils.is_domain_within_bdyfile(self.lat2d, self.lon2d, src_lat, src_lon)):
+            utils.throw_error(print_prefix+'SWAN domain is out of wave bdy file! Cannot continue!')
         src_lat2d,src_lon2d=np.meshgrid(src_lat, src_lon)
         src_mask=np.isnan(comb_ds['swh'].isel(time=0).values)
         ts=comb_ds['valid_time'].values
@@ -181,9 +203,14 @@ class BdyMaker:
             i,j=find_ij_mask(src_lat2d,src_lon2d,src_mask,seg['latm'],seg['lonm'])
             seg['sigh']=comb_ds['swh'].values[:,j,i]
             seg['sigh']=np.where(seg['sigh']<0.1, 0.1, seg['sigh'])
-            seg['period']=comb_ds['mwp'].values[:,j,i]
-            seg['dir']=comb_ds['mwd'].values[:,j,i]
-            seg['spread']=cal_dir_spread(comb_ds['wdw'].values[:,j,i])
+            if gfs_flag:
+                seg['period']=comb_ds['perpw'].values[:,j,i]
+                seg['dir']=comb_ds['dirpw'].values[:,j,i]
+                seg['spread']=np.repeat(20.0, len_ts)
+            else:
+                seg['period']=comb_ds['mwp'].values[:,j,i]
+                seg['dir']=comb_ds['mwd'].values[:,j,i]
+                seg['spread']=cal_dir_spread(comb_ds['wdw'].values[:,j,i])
             data=np.array([seg['sigh'], seg['period'], seg['dir'], seg['spread']])
             seg['df'] = pd.DataFrame(data.T, index=ts, columns=['sigh', 'period', 'dir', 'spread'])
            

@@ -16,12 +16,12 @@ import os
 
 import logging, logging.config
 
-def throw_error(source, msg):
+def throw_error(msg):
     '''
     throw error and exit
     '''
-    logging.error(source+msg)
-    exit()
+    logging.error(msg)
+    exit(1)
 
 def write_log(msg, lvl=20):
     '''
@@ -67,6 +67,8 @@ def is_domain_within_bdyfile(lat_swan, lon_swan, lat_bdy, lon_bdy):
     '''
    
     if not(lat_swan.min()>=lat_bdy.min() and lat_swan.max()<=lat_bdy.max()):
+        write_log('lat_swan:%7.4f-%7.4f is not within lat_bdy:%7.4f-%7.4f'%(
+            lat_swan.min(), lat_swan.max(), lat_bdy.min(), lat_bdy.max()))
         return False
     if not(lon_swan.min()>=lon_bdy.min() and lon_swan.max()<=lon_bdy.max()):
         return False
@@ -77,6 +79,7 @@ def get_wrf_file(tgt_time, wrf_dir, wrf_domain):
     return aimed wrf file name given tgt_time and wrf_domain
     '''
     return 'wrfout_'+wrf_domain+'_'+tgt_time.strftime('%Y-%m-%d_%H:00:00')
+
 def interp_wrf2swan(wrf_var, swan_lat, swan_lon):
     """ 
     Linearly interpolate var from WRF grid onto SWAN grid 

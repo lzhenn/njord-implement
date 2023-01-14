@@ -22,20 +22,15 @@ def main_run():
 
     utils.write_log('Read Config...')    
     # controller config handler
-    cfg_hdl=lib.cfgparser.read_cfg('./conf/config.roms.prep.ini')
+    cfg_hdl=lib.cfgparser.read_cfg('./conf/config.hcast.ini')
 
     # build maker 
     utils.write_log('ROMS: Build Initial maker...')
     roms_maker=lib.roms_icbc_maker.ROMSMaker(cfg_hdl)
     
-    # build initial file 
-    roms_maker.build_ic()
+    # build initial, clim, and bdy file 
+    roms_maker.build_icbc()
     
-    # build climatology file 
-    roms_maker.build_clm()
-
-    # build boundary file
-    roms_maker.build_bdy()
 
 if __name__ == '__main__':
     main_run()

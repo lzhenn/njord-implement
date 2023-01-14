@@ -16,14 +16,13 @@ cd $ABS_PATH
 WRF_PATH=$1
 STRT_DATE_FULL=$2 #YYYY-MM-DD_HH
 INIT_RUN_FLAG=$3
-CASE_NAME=$4
+ROMS_ICBC_ROOT=$4
 DOMAIN_GROUP=$5
 NJORD_ROOT=$6
-RA_ROOT=$7
-ARCH_ROOT=$8
-ROMS_DT=$9
-WRF_RST=${10}
-OFFSET_DAY=${11}
+ARCH_ROOT=$7
+ROMS_DT=$8
+WRF_RST=$9
+
 ## stream control flags
 TEST_FLAG=0
 ARCHIVE_FLAG=1
@@ -33,10 +32,11 @@ ARCHIVE_FLAG=1
 FCST_DAYS=1
 CPL_IN=coupling.in
 
+
 ## Generate Paths
 ### Set ROMS for generating ICBC for ocn
-NJORD_PROJ_PATH=${NJORD_ROOT}/Projects/Njord/
-ARCH_ROOT=${ARCH_ROOT}/${CASE_NAME}/
+NJORD_PROJ_PATH=${NJORD_ROOT}/Projects/${DOMAIN_GROUP}/
+ARCH_ROOT=${ARCH_ROOT}
 
 # Load-balancing Configurations for Processors Layer
 NTASKS_ATM=36
@@ -63,11 +63,10 @@ END_DATE_PACK=${END_DATE//-/}
 echo ">>PREPROCESSING..."
 
 # ----------cp files----------
-
-#cp ./domaindb/${DOMAIN_GROUP}/scrip*.nc $NJORD_PROJ_PATH/roms_swan_grid/
+ln -sf `pwd`/domaindb/${DOMAIN_GROUP}/scrip*.nc $NJORD_PROJ_PATH/roms_swan_grid/
 
 ## swan file
-cp ./db/${DOMAIN_GROUP}/swan_d01.in $NJORD_PROJ_PATH
+cp ./db/${DOMAIN_GROUP}/swan_d0?.in $NJORD_PROJ_PATH
 
 if [ $INIT_RUN_FLAG == 1 ]; then
     ## coupling file
@@ -82,6 +81,10 @@ if [ $INIT_RUN_FLAG == 1 ]; then
     
     ## ocean file
     cp ./db/${DOMAIN_GROUP}/roms_d01.in $NJORD_PROJ_PATH
+ 
+    if [ ! -d "$NJORD_PROJ_PATH/roms_swan_grid/" ]; then
+        mkdir $NJORD_PROJ_PATH/roms_swan_grid/
+    fi
     cp ./domaindb/${DOMAIN_GROUP}/roms_d0?_omp.nc $NJORD_PROJ_PATH/roms_swan_grid/
     
     cp ./domaindb/${DOMAIN_GROUP}/swan_* $NJORD_PROJ_PATH/roms_swan_grid/
@@ -91,13 +94,14 @@ else
     # python roms_time_bug_patch.py $NJORD_ROOT $STRT_DATE_FULL
     cp ./db/${DOMAIN_GROUP}/roms_d01.in.hot $NJORD_PROJ_PATH/roms_d01.in
     sed -i "s/&INITIAL/INITIAL/g" ${NJORD_PROJ_PATH}/swan_d01.in
+    sed -i "s/&INITIAL/INITIAL/g" ${NJORD_PROJ_PATH}/swan_d02.in
 fi
 
 # ----------cp files----------
 cd ./pre_driver
 date
 sh wrf_hcast_driver.sh $STRT_DATE_PACK $END_DATE_PACK $WRF_RST $NJORD_ROOT $INIT_HR
-sh roms_hcast_driver.sh $NJORD_PROJ_PATH $RA_ROOT $STRT_DATE_FULL $ROMS_DT $CASE_NAME $INIT_RUN_FLAG ${OFFSET_DAY}
+sh roms_hcast_driver.sh $NJORD_PROJ_PATH $STRT_DATE_FULL $ROMS_DT $ROMS_ICBC_ROOT $INIT_RUN_FLAG $DOMAIN_GROUP
 sh swan_hcast_driver.sh  $STRT_DATE $END_DATE $INIT_HR $NJORD_PROJ_PATH 
 date
 cd ..
@@ -111,13 +115,14 @@ sed -i "/NtileJ ==/c\ \ \ NtileJ == ${N_JTAKS_OCN}" ${NJORD_PROJ_PATH}/roms_d01.
 
 # Run script
 cd $NJORD_ROOT
+echo $NJORD_ROOT $STRT_DATE_FULL
 # clean wrfout
 rm -f wrfout*
 
 
 cat << EOF > run.sh
 #mpirun --hostfile ./mpihosts --rankfile ./mpirank -n 96 ./coawstM ./Projects/GBA/coupling_gba.in >& cwstv3.${TSTMP}.log
-mpirun -np ${NTASKS_ALL} ./coawstM ./Projects/Njord/${CPL_IN} >& cwstv3.${STRT_DATE_PACK}.log
+mpirun -np ${NTASKS_ALL} ./coawstM ./Projects/${DOMAIN_GROUP}/${CPL_IN} >& cwstv3.${STRT_DATE_PACK}.log
 #mpirun -hostfile ./mpihosts -n 96 ./coawstM ./Projects/GBA/coupling_gba.in >& cwstv3.${TSTMP}.log
 EOF
 

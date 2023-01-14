@@ -1,0 +1,10 @@
+*.nc
+*.pyc
+*.log
+Njord
+Njord_nest
+db/hycom_db.csv
+domaindb
+sandbox
+wrf-top-driver/
+

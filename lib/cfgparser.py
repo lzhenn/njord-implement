@@ -1,6 +1,5 @@
 #/usr/bin/env python3
 """configuration funcs to get parameters from user"""
-import os
 import configparser
 
 print_prefix='lib.cfgparser>>'
@@ -15,6 +14,8 @@ def write_cfg(cfg_hdl, config_fn):
     """ Simply write the config files """
     with open(config_fn, 'w') as configfile:
         cfg_hdl.write(configfile)
+
+
 
 def merge_cfg(cfg_org, cfg_tgt):
     """ merge the dynamic and static cfg """

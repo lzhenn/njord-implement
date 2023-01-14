@@ -54,10 +54,10 @@
 ! The Wav program needs multiple input files, one for each grid.
 
    ATM_name = namelist.input                            ! atmospheric model
-   WAV_name = Projects/Njord/swan_d01.in 
+   WAV_name = Projects/njord/swan_d01.in 
 !              Projects/Njord/swan_gba_operational_d02.in         ! wave model
 !  WAV_name = ww3_grid.inp
-   OCN_name = Projects/Njord/roms_d01.in             ! ocean model
+   OCN_name = Projects/njord/roms_d01.in             ! ocean model
 
 ! Sparse matrix interpolation weights files. You have 2 options:
 ! Enter "1" for option 1, or "2" for option 2, and then list the 
@@ -71,7 +71,7 @@
 !           Lib/SCRIP_COAWST/scrip_coawst[.exe]
 
 !  SCRIP_COAWST_NAME = Projects/Sandy/scrip_sandy_moving.nc
-   SCRIP_COAWST_NAME = Projects/Njord/roms_swan_grid/scrip_njord.nc
+   SCRIP_COAWST_NAME = Projects/njord/roms_swan_grid/scrip_njord.nc
 !  SCRIP_COAWST_NAME = Projects/Sandy/WW3/scrip_sandy_nowavenest.nc
 
 ! Option 2: THIS OPTION WILL BE REMOVED IN FUTURE VERSIONS.

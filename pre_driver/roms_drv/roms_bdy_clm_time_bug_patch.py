@@ -7,7 +7,7 @@ ymd=sys.argv[2]
 init_flag=sys.argv[3]
 offset=int(sys.argv[4])
 
-HALF_DAY=43200000000000
+HALF_DAY=43200000000000 
 ONE_DAY=HALF_DAY*2
 
 # bdy no ocean_time
